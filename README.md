@@ -3,7 +3,7 @@ This is mips game for the connect4 include trap, wormhole and snake
 Date Progress: Jan 22, 2025
 Description: This game is a beginner-friendly C programming project to enhance foundational programming skills. The game features an 8x8 grid array where players compete to win with the following elements:
 
-1.	Player Setup: The user can choose the number of players for the game.
+1.	Player Setup: Standard player setup with two players
 2.	Menu: There will be a menu for user selection, either for coin flip or exit the game
 3.	Unique Player Symbols: The program uses x and o as a standard for better visualization.
 4.	Wormholes and Traps: There will be three traps and three wormhole spawns independently in each row and column, minus the 1 row and column.
