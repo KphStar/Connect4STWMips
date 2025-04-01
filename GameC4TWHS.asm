@@ -1,6 +1,6 @@
 #/*********************************************************************
 
-#*               SAN DIEGO STATE UNIVERISTY                           *
+#*               SAN DIEGO STATE UNIVERSITY                           *
 
 #*                   DUC M LE 132485155
 
@@ -11,9 +11,11 @@
 #**********************************************************************
 
 .data
-    #**********************************************************************
+#**********************************************************************
     
-    #*                  SETUP  BOARD PLAYER
+#*                  SETUP BOARD PLAYER
+    
+#**********************************************************************
     
     board:        .space 64        # 8x8 grid
     
@@ -23,11 +25,13 @@
     
     players:      .byte 'x', 'o'   # Player 1 = 'x', Player 2 = 'o'
     
-    #**********************************************************************
+#**********************************************************************
     
-    #**********************************************************************
+#**********************************************************************
     
-    #*                  MESSAGE FEED BACK
+#*                  MESSAGE FEED BACK
+    
+#**********************************************************************
     
     welcome_msg:  .asciiz "=======================================================\n      WELCOME TO CONNECT 4 TRAPWORMHOLE!               \n=======================================================\n"
     
@@ -43,11 +47,13 @@
     
     invalid_col:  .asciiz "Invalid column number! Try again.\n"
     
-    #**********************************************************************
+#**********************************************************************
     
-    #**********************************************************************
+#**********************************************************************
     
-    #*                  PROMT USER 
+#*                  PROMPT USER 
+    
+#**********************************************************************
     
     menu_prompt:  .asciiz "Menu:\n  1) Start Game\n  2) Exit\n"
     
@@ -61,7 +67,9 @@
     
     #**********************************************************************
     
-    #*                  FILLIPING COUN RESULT
+    #*                  FLIPPING COIN RESULT
+    
+    #**********************************************************************
     
     heads_result: .asciiz "Heads! Player 1 goes first.\n"
     
@@ -69,10 +77,11 @@
         
     #**********************************************************************
     
-    
     #**********************************************************************
     
     #*                 ROW AND COL SPACING
+    
+    #**********************************************************************
     
     newline:      .asciiz "\n"
     
@@ -85,6 +94,8 @@
     #**********************************************************************
     
     #*                TRAP AND WORMHOLE POSITION
+    
+    #**********************************************************************
     
     wormhole1_entry:  .word 2, 3  # Row 2, Col 3
     
@@ -106,26 +117,54 @@
     
     #*                MISC 
     
+    #**********************************************************************
+    
+    debug_msg:    .asciiz "DEBUG: Checking win at position (row,col): "
+    
+    comma_msg:    .asciiz ","
+    
     debug_rand:   .asciiz "DEBUG: Random value = "
     
     buffer:       .space 10        # Input buffer
+    
+    trap_used: .word 0      # Flag to track if trap has been used (0 = not used, 1 = used)
+    
+    debug_msg_t0_init: .asciiz "DEBUG: $t0 after initialization: "
+     
+    debug_msg_t0_loop: .asciiz "DEBUG: $t0 in find_spot_loop: "
+     
+    debug_msg_t0_after_wormhole: .asciiz "DEBUG: $t0 after checkWormholesAndTrap: "
+     
+    debug_msg_a3: .asciiz "DEBUG: $a3 value: "
+
     
     #**********************************************************************
     
     #**********************************************************************
     
     #*                BIT MAP CONSTANTS  
+    
+    #**********************************************************************
 
     # Bitmap constants
     .eqv WIDTH 32    # 256 / 8 = 32 pixels wide
+    
     .eqv HEIGHT 32   # 256 / 8 = 32 pixels high
+    
     .eqv BLACK  0x00000000
+    
     .eqv YELLOW 0x00FFFF00  # For coin edge and flipping states
+    
     .eqv SILVER 0x00C0C0C0  # For coin face
+    
     .eqv RED    0x00FF0000  # For 'H'
+    
     .eqv GREEN  0x0000FF00  # For 'T'
     
      #**********************************************************************
+     
+     
+     
      
      #**********************************************************************
     
@@ -138,8 +177,6 @@
     #**********************************************************************
     
     #**********************************************************************
-    
-  
 
 .text
  #**********************************************************************
@@ -211,7 +248,6 @@
         addi $sp, $sp, 4
         jr $ra
         
-        
  #**********************************************************************      
   
  #**********************************************************************
@@ -219,6 +255,7 @@
  #*                COIN FLIP ANIMATION PROCEDURE 
  
  #**********************************************************************
+ 
     coinFlipAnimation:
         addi $sp, $sp, -8
         sw $ra, 0($sp)
@@ -288,126 +325,155 @@
         addi $sp, $sp, 8
         jr $ra
         
-        
  #**********************************************************************      
-   
    
  #**********************************************************************
  
  #*                MAIN GAME PROCEDURE 
  
  #**********************************************************************
-    MainGame:
-        addi $sp, $sp, -16
-        sw $ra, 0($sp)
-        sw $s0, 4($sp)
-        sw $s1, 8($sp)
-        sw $s2, 12($sp)
-        la $a0, board
-        lw $a1, rows
-        lw $a2, cols
-        la $a3, players
-        move $s1, $s0        # $s1 = current player (1 or 2)
-        subi $s1, $s1, 1     # Adjust to 0-based index for player array
+ 
+ MainGame:
+    addi $sp, $sp, -24
+    sw $ra, 0($sp)
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+    sw $s2, 12($sp)
+    sw $s3, 16($sp)
+    sw $s4, 20($sp)   
+    la $a0, board
+    lw $a1, rows
+    lw $a2, cols
+    la $a3, players
+    move $s4, $a3       
+    move $s1, $s0        # $s1 = current player (1 or 2)
+    subi $s1, $s1, 1     # Adjust to 0-based index for player array
         
-    game_loop:
-        jal displayBoard
-        li $v0, 4
-        la $a0, player_prompt
-        syscall
-        li $v0, 1
-        addi $a0, $s1, 1     # Display player number (1 or 2)
-        syscall
-        li $v0, 11
-        addu $t2, $a3, $s1
-        lb $a0, 0($t2)       # Display player symbol ('x' or 'o')
-        syscall
-        li $v0, 4
-        la $a0, enter_col
-        syscall
-        li $v0, 8
-        la $a0, buffer
-        li $a1, 10
-        syscall
-        lb $t0, buffer
-        beq $t0, 'e', end_game
-        subi $t0, $t0, '0'
-        blt $t0, 0, invalid_input
-        bge $t0, 8, invalid_input
-        move $s2, $t0        # $s2 = column
-        li $t0, 7            # Start from bottom row
+game_loop:
+    jal displayBoard
+    li $v0, 4
+    la $a0, player_prompt
+    syscall
+    li $v0, 1
+    addi $a0, $s1, 1     # Display player number (1 or 2)
+    syscall
+    li $v0, 11
+    addu $t2, $s4, $s1   
+    lb $a0, 0($t2)       # Display player symbol ('x' or 'o')
+    syscall
+    li $v0, 4
+    la $a0, enter_col
+    syscall
+    li $v0, 8
+    la $a0, buffer
+    li $a1, 10
+    syscall
+    lb $t0, buffer
+    beq $t0, 'e', end_game
+    subi $t0, $t0, '0'
+    blt $t0, 0, invalid_input
+    bge $t0, 8, invalid_input
+    move $s2, $t0        # $s2 = column
+    li $t0, 7            # Start from bottom row
         
-    find_spot_loop:
-        mul $t1, $t0, 8
-        add $t1, $t1, $s2
-        la $t2, board
-        add $t2, $t2, $t1
-        lb $t3, 0($t2)
-        beq $t3, ' ', place_disc
-        addi $t0, $t0, -1
-        bgez $t0, find_spot_loop
-        j invalid_input
+find_spot_loop:
+    mul $t1, $t0, 8
+    add $t1, $t1, $s2
+    la $t2, board
+    add $t2, $t2, $t1
+    lb $t3, 0($t2)
+    beq $t3, ' ', place_disc
+    addi $t0, $t0, -1
+    bgez $t0, find_spot_loop
+    j invalid_input
         
-    place_disc:
-        addu $t4, $a3, $s1
-        lb $t4, 0($t4)       # Load player symbol
-        sb $t4, 0($t2)       # Place disc
-        move $a0, $t0        # Row
-        move $a1, $s2        # Column
-        jal checkWormholesAndTrap
-        beq $v0, 1, wormhole_handled
-        beq $v0, 2, trap_handled
-        move $a0, $t0
-        move $a1, $s2
-        jal checkWinner
-        beqz $v0, continue_game
-        li $v0, 4
-        la $a0, player_prompt
-        syscall
-        li $v0, 1
-        move $a0, $v1        # Winning player number
-        syscall
-        li $v0, 11
-        lb $a0, 0($t2)       # Winning player symbol
-        syscall
-        li $v0, 4
-        la $a0, newline
-        syscall
-        li $v0, 4
-        la $a0, win_msg
-        syscall
-        # Play victory MIDI tone: pitch 72 (C5), 1000ms, trumpet (56), volume 100
-        play_victory_tune
-        j end_game
+place_disc:
+    addu $t4, $s4, $s1  
+    lb $t4, 0($t4)       # Load player symbol
+    sb $t4, 0($t2)       # Place disc
+    move $s3, $t0        # Save row in $s3
+    move $a0, $t0        # Row
+    move $a1, $s2        # Column
+    move $a2, $t4        # Player's piece
+    jal checkWormholesAndTrap
+    beq $v0, 1, wormhole_handled
+    beq $v0, 2, trap_handled
+
+    # Debug: Print the board state before checking for a win
+    jal displayBoard
+    li $v0, 4
+    la $a0, newline
+    syscall
+    li $v0, 4
+    la $a0, debug_msg
+    syscall
+    li $v0, 1
+    move $a0, $s3    
+    syscall
+    li $v0, 4
+    la $a0, comma_msg
+    syscall
+    li $v0, 1
+    move $a0, $s2
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+
+    move $a0, $s3        
+    move $a1, $s2
+    jal checkWinner
+    beqz $v0, continue_game
+    jal displayBoard     # Display the final board state
+    li $v0, 4
+    la $a0, player_prompt
+    syscall
+    li $v0, 1
+    move $a0, $v1        # Winning player number
+    syscall
+    li $v0, 11
+    addu $t2, $s4, $s1  
+    lb $a0, 0($t2)       # Winning player symbol
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    li $v0, 4
+    la $a0, win_msg
+    syscall
+    play_victory_tune
+    j end_game
         
-    continue_game:
-        addi $s1, $s1, 1
-        andi $s1, $s1, 1     # Toggle between 0 and 1
-        j game_loop
+continue_game:
+    addi $s1, $s1, 1
+    andi $s1, $s1, 1     # Toggle between 0 and 1
+    j game_loop
         
-    wormhole_handled:
-        addi $s1, $s1, 1
-        andi $s1, $s1, 1
-        j game_loop
+wormhole_handled:
+    addi $s1, $s1, 1
+    andi $s1, $s1, 1
+    j game_loop
         
-    trap_handled:
-        addi $s1, $s1, 1
-        andi $s1, $s1, 1
-        j game_loop
+trap_handled:
+    addi $s1, $s1, 1
+    andi $s1, $s1, 1
+    j game_loop
         
-    invalid_input:
-        li $v0, 4
-        la $a0, invalid_col
-        syscall
-        j game_loop
+invalid_input:
+    li $v0, 4
+    la $a0, invalid_col
+    syscall
+    j game_loop
         
-    end_game:
-        lw $ra, 0($sp)
-        lw $s0, 4($sp)
-        lw $s1, 8($sp)
-        lw $s2, 12($sp)
-        addi $sp, $sp, 16
-        jr $ra
+end_game:
+    lw $ra, 0($sp)
+    lw $s0, 4($sp)
+    lw $s1, 8($sp)
+    lw $s2, 12($sp)
+    lw $s3, 16($sp)
+    lw $s4, 20($sp)
+    addi $sp, $sp, 24
+    jr $ra
         
  #**********************************************************************
    
@@ -479,413 +545,525 @@
  #**********************************************************************
    
  #**********************************************************************
- 
- #*                CHECK WORMHOLE AND TRAP PROCEDURE 
+#*               CHECK WORMHOLE AND TRAP PROCEDURE 
+#*  Inputs:
+#*    $a0: Row of the move
+#*    $a1: Column of the move
+#*    $a2: Player's piece ('x' or 'o')
+#*  Outputs:
+#*    $v0: 0 (no special action), 1 (wormhole activated), 2 (trap activated)
+#**********************************************************************
 
- #**********************************************************************
- 
-    checkWormholesAndTrap:
-        addi $sp, $sp, -12
-        sw $ra, 0($sp)
-        sw $s0, 4($sp)
-        sw $s1, 8($sp)
-        move $s0, $a0
-        move $s1, $a1
-        lw $t0, wormhole1_entry
-        lw $t1, wormhole1_entry+4
-        beq $a0, $t0, check_w1_col
-        j check_wormhole2
-        
-    check_w1_col:
-        beq $a1, $t1, wormhole1_activate
-        j check_wormhole2
-        
-    wormhole1_activate:
-        la $a0, wormhole1_exit
-        jal handleWormhole
-        li $v0, 1
-        j end_check_wormholes
-        
-    check_wormhole2:
-        lw $t0, wormhole2_entry
-        lw $t1, wormhole2_entry+4
-        beq $a0, $t0, check_w2_col
-        j check_wormhole3
-        
-    check_w2_col:
-        beq $a1, $t1, wormhole2_activate
-        j check_wormhole3
-        
-    wormhole2_activate:
-        la $a0, wormhole2_exit
-        jal handleWormhole
-        li $v0, 1
-        j end_check_wormholes
-        
-    check_wormhole3:
-        lw $t0, wormhole3_entry
-        lw $t1, wormhole3_entry+4
-        beq $a0, $t0, check_w3_col
-        j check_trap
-        
-    check_w3_col:
-        beq $a1, $t1, wormhole3_activate
-        j check_trap
-        
-    wormhole3_activate:
-        la $a0, wormhole3_exit
-        jal handleWormhole
-        li $v0, 1
-        j end_check_wormholes
-        
-    check_trap:
-        lw $t0, trap_pos
-        lw $t1, trap_pos+4
-        beq $a0, $t0, check_trap_col
-        j no_special
-        
-    check_trap_col:
-        beq $a1, $t1, trap_activate
-        j no_special
-        
-    trap_activate:
-        jal handleTrap
-        li $v0, 2
-        j end_check_wormholes
-        
-    no_special:
-        li $v0, 0
-        
-    end_check_wormholes:
-        lw $ra, 0($sp)
-        lw $s0, 4($sp)
-        lw $s1, 8($sp)
-        addi $sp, $sp, 12
-        jr $ra
-        
- #**********************************************************************       
-
- #**********************************************************************
- 
- #*               HANDLE WORMHOLE AND TRAP PROCEDURE 
- 
- #**********************************************************************
-    handleWormhole:
-        addi $sp, $sp, -8
-        sw $ra, 0($sp)
-        sw $s0, 4($sp)
-        mul $t1, $s0, 8
-        add $t1, $t1, $s1
-        la $t2, board
-        add $t2, $t2, $t1
-        lb $t7, 0($t2)
-        lw $t3, 0($a0)
-        lw $t4, 4($a0)
-        mul $t5, $t3, 8
-        add $t5, $t5, $t4
-        la $t6, board
-        add $t6, $t6, $t5
-        lb $t8, 0($t6)
-        bne $t8, ' ', skip_teleport
-        sb $t7, 0($t6)
-        li $v0, 4
-        la $a0, wormhole_msg
-        syscall
-        
-    skip_teleport:
-        lw $ra, 0($sp)
-        lw $s0, 4($sp)
-        addi $sp, $sp, 8
-        jr $ra
-
-    # handleTrap procedure 
-    handleTrap:
-        addi $sp, $sp, -12
-        sw $ra, 0($sp)
-        sw $s0, 4($sp)
-        sw $s1, 8($sp)
-        move $s0, $a0
-        move $s1, $a1
-        mul $t1, $s0, 8
-        add $t1, $t1, $s1
-        la $t2, board
-        add $t2, $t2, $t1
-        lb $t7, 0($t2)
-        li $t8, 'x'
-        beq $t7, 'o', set_opponent_x
-        li $t8, 'o'
-        j start_trap_logic
-        
-    set_opponent_x:
-        li $t8, 'x'
-        
-    start_trap_logic:
-        li $v0, 4
-        la $a0, trap_msg
-        syscall
-        li $t0, 0
-        
-    trap_col_loop:
-        li $t1, 0
-        li $t9, 0
-        
-    check_col_for_opponent:
-        mul $t2, $t1, 8
-        add $t2, $t2, $t0
-        la $t3, board
-        add $t3, $t3, $t2
-        lb $t4, 0($t3)
-        beq $t4, $t8, found_opponent
-        addi $t1, $t1, 1
-        blt $t1, 8, check_col_for_opponent
-        j trap_next_col
-        
-    found_opponent:
-        li $t9, 1
-        li $t1, 0
-        
-    trap_row_loop:
-        mul $t2, $t1, 8
-        add $t2, $t2, $t0
-        la $t3, board
-        add $t3, $t3, $t2
-        lb $t4, 0($t3)
-        bne $t4, $t8, skip_trap
-        blt $t1, 7, check_above_trap
-        j check_below_trap
-        
-    check_above_trap:
-        addi $t5, $t1, 1
-        mul $t6, $t5, 8
-        add $t6, $t6, $t0
-        la $t9, board
-        add $t9, $t9, $t6
-        lb $t5, 0($t9)
-        bne $t5, ' ', check_below_trap
-        sb $t7, 0($t9)
-        
-    check_below_trap:
-        ble $t1, 0, skip_trap
-        subi $t5, $t1, 1
-        mul $t6, $t5, 8
-        add $t6, $t6, $t0
-        la $t9, board
-        add $t9, $t9, $t6
-        lb $t5, 0($t9)
-        bne $t5, ' ', skip_trap
-        sb $t7, 0($t9)
-        
-    skip_trap:
-        addi $t1, $t1, 1
-        blt $t1, 8, trap_row_loop
-        
-    trap_next_col:
-        addi $t0, $t0, 1
-        blt $t0, 8, trap_col_loop
-        
-    end_trap:
-        lw $ra, 0($sp)
-        lw $s0, 4($sp)
-        lw $s1, 8($sp)
-        addi $sp, $sp, 12
-        jr $ra
-        
- 
- #**********************************************************************       
-
- #**********************************************************************
- 
- #*               CHECK WINNER PROCEDURE 
-
- #**********************************************************************
-
-   checkWinner:
+checkWormholesAndTrap:
     addi $sp, $sp, -16
     sw $ra, 0($sp)
     sw $s0, 4($sp)
     sw $s1, 8($sp)
-    sw $t0, 12($sp)
+    sw $s2, 12($sp)
+    move $s0, $a0
+    move $s1, $a1
+    move $s2, $a2       # Store player's piece in $s2
+    lw $t4, wormhole1_entry
+    lw $t5, wormhole1_entry+4
+    beq $a0, $t4, check_w1_col
+    j check_wormhole2
+        
+check_w1_col:
+    beq $a1, $t5, wormhole1_activate
+    j check_wormhole2
+        
+wormhole1_activate:
+    la $a0, wormhole1_exit
+    jal handleWormhole
+    beq $v0, 1, win_detected_special  
+    li $v0, 1
+    j end_check_wormholes
+        
+check_wormhole2:
+    lw $t4, wormhole2_entry
+    lw $t5, wormhole2_entry+4
+    beq $a0, $t4, check_w2_col
+    j check_wormhole3
+        
+check_w2_col:
+    beq $a1, $t5, wormhole2_activate
+    j check_wormhole3
+        
+wormhole2_activate:
+    la $a0, wormhole2_exit
+    jal handleWormhole
+    beq $v0, 1, win_detected_special  
+    li $v0, 1
+    j end_check_wormholes
+        
+check_wormhole3:
+    lw $t4, wormhole3_entry
+    lw $t5, wormhole3_entry+4
+    beq $a0, $t4, check_w3_col
+    j check_trap
+        
+check_w3_col:
+    beq $a1, $t5, wormhole3_activate
+    j check_trap
+        
+wormhole3_activate:
+    la $a0, wormhole3_exit
+    jal handleWormhole
+    beq $v0, 1, win_detected_special  
+    li $v0, 1
+    j end_check_wormholes
+        
+check_trap:
+    lw $t4, trap_pos
+    lw $t5, trap_pos+4
+    beq $a0, $t4, check_trap_col
+    j no_special
+        
+check_trap_col:
+    beq $a1, $t5, trap_activate
+    j no_special
+        
+trap_activate:
+    # Call removeTrapDisc to remove the disc at the trap position
+    move $a0, $s0       # Row of the move
+    move $a1, $s1       # Column of the move
+    jal removeTrapDisc
+
+    # Check if the trap was activated
+    beq $v0, $zero, no_special  # If $v0 == 0, trap wasn't activated
+
+    # Call trapOpponentDiscs to trap opponent discs
+    move $a0, $s2       # Player's piece
+    jal trapOpponentDiscs
+
+    # Set return value to indicate trap activation
+    li $v0, 2
+    j end_check_wormholes
+        
+no_special:
+    li $v0, 0
+        
+win_detected_special: 
+    j end_check_wormholes
+        
+end_check_wormholes:
+    lw $ra, 0($sp)
+    lw $s0, 4($sp)
+    lw $s1, 8($sp)
+    lw $s2, 12($sp)
+    addi $sp, $sp, 16
+    jr $ra
+    
+ #**********************************************************************       
+
+ #**********************************************************************
+ 
+ #*               HANDLE WORMHOLE PROCEDURE 
+ 
+ #**********************************************************************
+ 
+   handleWormhole:
+    addi $sp, $sp, -12
+    sw $ra, 0($sp)
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+    mul $t1, $s0, 8
+    add $t1, $t1, $s1
+    la $t2, board
+    add $t2, $t2, $t1
+    lb $t7, 0($t2)
+    lw $t3, 0($a0)
+    lw $t4, 4($a0)
+    mul $t5, $t3, 8
+    add $t5, $t5, $t4
+    la $t6, board
+    add $t6, $t6, $t5
+    lb $t8, 0($t6)
+    bne $t8, ' ', skip_teleport
+    li $t9, ' '
+    sb $t9, 0($t2)
+    sb $t7, 0($t6)
+    li $v0, 4
+    la $a0, wormhole_msg
+    syscall
+    move $a0, $t3
+    move $a1, $t4
+    jal checkWinner
+    beq $v0, 1, win_detected_wormhole
+        
+skip_teleport:
+    j end_handle_wormhole
+
+win_detected_wormhole:
+    j end_handle_wormhole
+
+end_handle_wormhole:
+    lw $ra, 0($sp)
+    lw $s0, 4($sp)
+    lw $s1, 8($sp)
+    addi $sp, $sp, 12
+    jr $ra
+    
+    
+#**********************************************************************
+#*              
+#**********************************************************************
+
+#**********************************************************************
+#*               REMOVE TRAP DISC PROCEDURE 
+#**********************************************************************
+
+removeTrapDisc:
+    # Save registers
+    addi $sp, $sp, -12
+    sw $ra, 0($sp)
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+
+    # Move arguments to saved registers
+    move $s0, $a0       # Row of the current move
+    move $s1, $a1       # Column of the current move
+
+    # Check if trap has already been used
+    lw $t0, trap_used
+    bne $t0, $zero, end_remove_trap  # If trap_used != 0, skip trap logic
+
+    # Check if the current move is at the trap position (row 3, col 4)
+    la $t1, trap_pos
+    lw $t2, 0($t1)      # Load trap row (3)
+    lw $t3, 4($t1)      # Load trap col (4)
+    bne $s0, $t2, end_remove_trap  # If current row != trap row, skip
+    bne $s1, $t3, end_remove_trap  # If current col != trap col, skip
+
+    # Load the player's piece at the trap position (for reference)
+    mul $t1, $s0, 8
+    add $t1, $t1, $s1
+    la $t2, board
+    add $t2, $t2, $t1
+    lb $t7, 0($t2)      # Load player's piece ('x' or 'o')
+
+    # Remove the disc at the trap position
+    li $t5, ' '
+    sb $t5, 0($t2)      # Set the trap position to space
+
+    # Mark the trap as used
+    li $t0, 1
+    sw $t0, trap_used   # Mark trap as used
+
+    # Return 1 to indicate the trap was activated
+    li $v0, 1
+    j end_remove_trap
+
+end_remove_trap:
+    # If trap wasn't activated, return 0
+    beq $v0, 1, skip_return_zero
+    li $v0, 0
+
+skip_return_zero:
+    # Restore registers
+    lw $ra, 0($sp)
+    lw $s0, 4($sp)
+    lw $s1, 8($sp)
+    addi $sp, $sp, 12
+    jr $ra
+
+#**********************************************************************    
+
+#**********************************************************************
+#*               TRAP OPPONENT DISCS PROCEDURE 
+#*  Scans the entire board (row by row, column by column) and traps
+#*  every opponent disc found by placing the current player's disc
+#*  above or below (if there's an empty space), without removing the opponent's disc.
+#*  Inputs:
+#*    $a0: Player's piece ('x' or 'o')
+#*  Outputs:
+#*    None (modifies the board directly)
+#**********************************************************************
+
+trapOpponentDiscs:
+    # Save registers
+    addi $sp, $sp, -12
+    sw $ra, 0($sp)
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+
+    # Store player's piece
+    move $s0, $a0       # $s0 = player's piece ('x' or 'o')
+
+    # Determine opponent's piece
+    li $s1, 'x'         # $s1 = opponent's piece
+    beq $s0, 'o', opponent_set
+    li $s1, 'o'
+
+opponent_set:
+    # Print trap activation message
+    li $v0, 4
+    la $a0, trap_msg
+    syscall
+
+    # Initialize row counter
+    li $t0, 0           # $t0 = row counter
+
+trap_row_loop:
+    li $t1, 0           # $t1 = column counter
+
+trap_col_loop:
+    # Calculate board index: (row * 8) + col
+    mul $t2, $t0, 8
+    add $t2, $t2, $t1
+    la $t3, board
+    add $t3, $t3, $t2   # $t3 = address of board[row][col]
+    lb $t4, 0($t3)      # $t4 = piece at board[row][col]
+
+    # Check if the piece is the opponent's
+    bne $t4, $s1, skip_trap  # If not opponent's piece, skip
+
+    # Found an opponent's disc, try to trap it by placing player's disc above or below
+    # First, try to place player's disc above (row - 1)
+    blt $t0, 1, try_below  # If row == 0, can't place above, try below
+
+    # Check the spot above (row - 1, col)
+    subi $t5, $t0, 1    # $t5 = row - 1
+    mul $t6, $t5, 8
+    add $t6, $t6, $t1
+    la $t7, board
+    add $t7, $t7, $t6   # $t7 = address of board[row-1][col]
+    lb $t8, 0($t7)      # $t8 = piece at board[row-1][col]
+    beq $t8, ' ', place_above  # If spot above is empty, place player's disc
+
+try_below:
+    # If can't place above, try below (row + 1)
+    bge $t0, 7, skip_trap  # If row == 7, can't place below, skip
+
+    # Check the spot below (row + 1, col)
+    addi $t5, $t0, 1    # $t5 = row + 1
+    mul $t6, $t5, 8
+    add $t6, $t6, $t1
+    la $t7, board
+    add $t7, $t7, $t6   # $t7 = address of board[row+1][col]
+    lb $t8, 0($t7)      # $t8 = piece at board[row+1][col]
+    beq $t8, ' ', place_below  # If spot below is empty, place player's disc
+    j skip_trap         # If neither above nor below is empty, skip
+
+place_above:
+    # Place player's disc above
+    sb $s0, 0($t7)      # Place player's piece at board[row-1][col]
+    j skip_trap
+
+place_below:
+    # Place player's disc below
+    sb $s0, 0($t7)      # Place player's piece at board[row+1][col]
+
+skip_trap:
+    # Move to the next column
+    addi $t1, $t1, 1
+    blt $t1, 8, trap_col_loop
+
+    # Move to the next row
+    addi $t0, $t0, 1
+    blt $t0, 8, trap_row_loop
+
+end_trap_opponents:
+    # Restore registers
+    lw $ra, 0($sp)
+    lw $s0, 4($sp)
+    lw $s1, 8($sp)
+    addi $sp, $sp, 12
+    jr $ra
+    
+#**********************************************************************
+
+
+#**********************************************************************
+#*               CHECK WINNER PROCEDURE 
+#*  Checks for a win after placing a disc. Declares a win if the placed
+#*  disc results in exactly 4 consecutive matching pieces in any direction
+#*  (horizontal, vertical, forward diagonal, backward diagonal).
+#*  Inputs:
+#*    $a0: Row of the placed disc
+#*    $a1: Column of the placed disc
+#*  Outputs:
+#*    $v0: 1 if a win is detected, 0 otherwise
+#*    $v1: 1 if Player 1 ('x') wins, 2 if Player 2 ('o') wins, 0 if no win
+#**********************************************************************
+checkWinner:
+    addi $sp, $sp, -20
+    sw $ra, 0($sp)
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+    sw $s2, 12($sp)
+    sw $s3, 16($sp)
     move $s0, $a0        # Row of the placed disc
     move $s1, $a1        # Column of the placed disc
-    la $t0, board
+    la $s2, board        # Base address of the board
     mul $t2, $s0, 8
     add $t2, $t2, $s1
-    add $t2, $t2, $t0
-    lb $t4, 0($t2)       # Load the symbol at the placed position ('x' or 'o')
-    beq $t4, ' ', no_win
-    li $t3, 0            # Counter for matching pieces
-    move $t1, $s1        # Column iterator for horizontal check
+    add $t2, $t2, $s2
+    lb $s3, 0($t2)       # Load the symbol at the placed position ('x' or 'o')
+    beq $s3, ' ', no_win # If the position is empty, no win possible
 
-   horizontal_loop:
-    blt $t1, 0, horizontal_left_loop_start
-    bge $t1, 8, horizontal_done
+    # Horizontal Check
+    li $t3, 1            # Total count (start with the placed disc)
+    move $t1, $s1        # Column iterator for left
+    move $t5, $s1        # Column iterator for right
+horizontal_loop:
+    # Check left
+    addi $t1, $t1, -1
+    blt $t1, 0, check_right
     mul $t6, $s0, 8
     add $t6, $t6, $t1
-    add $t6, $t6, $t0
+    add $t6, $t6, $s2
     lb $t7, 0($t6)
-    bne $t7, $t4, horizontal_left_loop_start
+    bne $t7, $s3, check_right
     addi $t3, $t3, 1
-    bge $t3, 4, win_detected
-    addi $t1, $t1, 1
     j horizontal_loop
 
-   horizontal_left_loop_start:
-    move $t1, $s1
-    subi $t1, $t1, 1
-
-   horizontal_left_loop:
-    blt $t1, 0, horizontal_done
-    bge $t1, 8, horizontal_done
+check_right:
+    # Check right
+    addi $t5, $t5, 1
+    bge $t5, 8, horizontal_done
     mul $t6, $s0, 8
-    add $t6, $t6, $t1
-    add $t6, $t6, $t0
+    add $t6, $t6, $t5
+    add $t6, $t6, $s2
     lb $t7, 0($t6)
-    bne $t7, $t4, horizontal_done
+    bne $t7, $s3, horizontal_done
     addi $t3, $t3, 1
-    bge $t3, 4, win_detected
-    subi $t1, $t1, 1
-    j horizontal_left_loop
+    j check_right
 
-   horizontal_done:
-    li $t3, 0
-    move $t1, $s0        # Row iterator for vertical check
+horizontal_done:
+    beq $t3, 4, win_detected  # Win if exactly 4 pieces are found
 
-   vertical_up_loop:
-    blt $t1, 0, vertical_down_start
-    mul $t6, $t1, 8
-    add $t6, $t6, $s1
-    add $t6, $t6, $t0
-    lb $t7, 0($t6)
-    bne $t7, $t4, vertical_down_start
-    addi $t3, $t3, 1
-    bge $t3, 4, win_detected
+    # Vertical Check
+    li $t3, 1            # Total count (start with the placed disc)
+    move $t1, $s0        # Row iterator for up
+    move $t5, $s0        # Row iterator for down
+vertical_loop:
+    # Check up
     addi $t1, $t1, -1
-    j vertical_up_loop
-
-   vertical_down_start:
-    move $t1, $s0
-    addi $t1, $t1, 1
-
-   vertical_down_loop:
-    bge $t1, 8, vertical_done
+    blt $t1, 0, check_down
     mul $t6, $t1, 8
     add $t6, $t6, $s1
-    add $t6, $t6, $t0
+    add $t6, $t6, $s2
     lb $t7, 0($t6)
-    bne $t7, $t4, vertical_done
+    bne $t7, $s3, check_down
     addi $t3, $t3, 1
-    bge $t3, 4, win_detected
-    addi $t1, $t1, 1
-    j vertical_down_loop
+    j vertical_loop
 
-   vertical_done:
-    li $t3, 0
-    move $t1, $s0
-    move $t5, $s1
-
-# Forward diagonal (top-left to bottom-right)
-   diagonal_forward_start:
-    li $t3, 0           # Reset counter
-    move $t1, $s0       # Row
-    move $t5, $s1       # Column
-
-   diagonal_forward_up_left:
-    blt $t1, 0, diagonal_forward_count_start
-    blt $t5, 0, diagonal_forward_count_start
-    mul $t6, $t1, 8
-    add $t6, $t6, $t5
-    add $t6, $t6, $t0
+check_down:
+    # Check down
+    addi $t5, $t5, 1
+    bge $t5, 8, vertical_done
+    mul $t6, $t5, 8
+    add $t6, $t6, $s1
+    add $t6, $t6, $s2
     lb $t7, 0($t6)
-    bne $t7, $t4, diagonal_forward_count_start
+    bne $t7, $s3, vertical_done
     addi $t3, $t3, 1
-    addi $t1, $t1, -1   # Move up
-    addi $t5, $t5, -1   # Move left
-    j diagonal_forward_up_left
+    j check_down
 
-   diagonal_forward_count_start:
-    move $t1, $s0       # Reset to starting row
-    move $t5, $s1       # Reset to starting column
-    addi $t3, $t3, -1   # Adjust counter since starting position was counted
+vertical_done:
+    beq $t3, 4, win_detected  # Win if exactly 4 pieces are found
 
-   diagonal_forward_down_right:
-    bge $t1, 8, diagonal_backward_start
-    bge $t5, 8, diagonal_backward_start
+    # Forward Diagonal (Top-Left to Bottom-Right)
+    li $t3, 1            # Total count (start with the placed disc)
+    move $t1, $s0        # Row iterator for up-left
+    move $t5, $s1        # Column iterator for up-left
+    move $t8, $s0        # Row iterator for down-right
+    move $t9, $s1        # Column iterator for down-right
+diagonal_forward_loop:
+    # Check up-left
+    addi $t1, $t1, -1
+    addi $t5, $t5, -1
+    blt $t1, 0, check_down_right
+    blt $t5, 0, check_down_right
     mul $t6, $t1, 8
     add $t6, $t6, $t5
-    add $t6, $t6, $t0
+    add $t6, $t6, $s2
     lb $t7, 0($t6)
-    bne $t7, $t4, diagonal_backward_start
+    bne $t7, $s3, check_down_right
     addi $t3, $t3, 1
-    bge $t3, 4, win_detected
-    addi $t1, $t1, 1    # Move down
-    addi $t5, $t5, 1    # Move right
-    j diagonal_forward_down_right
+    j diagonal_forward_loop
 
-# Backward diagonal (top-right to bottom-left)
-   diagonal_backward_start:
-    li $t3, 0           # Reset counter
-    move $t1, $s0       # Row
-    move $t5, $s1       # Column
+check_down_right:
+    # Check down-right
+    addi $t8, $t8, 1
+    addi $t9, $t9, 1
+    bge $t8, 8, diagonal_forward_done
+    bge $t9, 8, diagonal_forward_done
+    mul $t6, $t8, 8
+    add $t6, $t6, $t9
+    add $t6, $t6, $s2
+    lb $t7, 0($t6)
+    bne $t7, $s3, diagonal_forward_done
+    addi $t3, $t3, 1
+    j check_down_right
 
-   diagonal_backward_up_right:
-    blt $t1, 0, diagonal_backward_count_start
-    bge $t5, 8, diagonal_backward_count_start
+diagonal_forward_done:
+    beq $t3, 4, win_detected  # Win if exactly 4 pieces are found
+
+    # Backward Diagonal (Top-Right to Bottom-Left)
+    li $t3, 1            # Total count (start with the placed disc)
+    move $t1, $s0        # Row iterator for up-right
+    move $t5, $s1        # Column iterator for up-right
+    move $t8, $s0        # Row iterator for down-left
+    move $t9, $s1        # Column iterator for down-left
+diagonal_backward_loop:
+    # Check up-right
+    addi $t1, $t1, -1
+    addi $t5, $t5, 1
+    blt $t1, 0, check_down_left
+    bge $t5, 8, check_down_left
     mul $t6, $t1, 8
     add $t6, $t6, $t5
-    add $t6, $t6, $t0
+    add $t6, $t6, $s2
     lb $t7, 0($t6)
-    bne $t7, $t4, diagonal_backward_count_start
-    addi $t3, $t3, 1    # Count this position
-    addi $t1, $t1, -1   # Move up
-    addi $t5, $t5, 1    # Move right
-    j diagonal_backward_up_right
+    bne $t7, $s3, check_down_left
+    addi $t3, $t3, 1
+    j diagonal_backward_loop
 
-   diagonal_backward_count_start:
-    move $t1, $s0       # Reset to starting row
-    move $t5, $s1       # Reset to starting column
-    addi $t3, $t3, -1   # Adjust counter since starting position was counted
-
-   diagonal_backward_down_left:
-    blt $t1, 0, no_win
-    blt $t5, 0, no_win
-    bge $t1, 8, no_win
-    bge $t5, 8, no_win
-    mul $t6, $t1, 8
-    add $t6, $t6, $t5
-    add $t6, $t6, $t0
+check_down_left:
+    # Check down-left
+    addi $t8, $t8, 1
+    addi $t9, $t9, -1
+    bge $t8, 8, diagonal_backward_done
+    blt $t9, 0, diagonal_backward_done
+    mul $t6, $t8, 8
+    add $t6, $t6, $t9
+    add $t6, $t6, $s2
     lb $t7, 0($t6)
-    bne $t7, $t4, no_win
-    addi $t3, $t3, 1    # Count this position
-    bge $t3, 4, win_detected
-    addi $t1, $t1, 1    # Move down
-    addi $t5, $t5, -1   # Move left
-    j diagonal_backward_down_left
+    bne $t7, $s3, diagonal_backward_done
+    addi $t3, $t3, 1
+    j check_down_left
 
-   no_win:
+diagonal_backward_done:
+    beq $t3, 4, win_detected  
+    j no_win
+
+no_win:
     li $v0, 0
     li $v1, 0
     j end_check_winner
 
-   win_detected:
+win_detected:
     li $v0, 1
-    beq $t4, 'x', player_1_win
+    beq $s3, 'x', player_1_win
     li $v1, 2
     j end_check_winner
 
-   player_1_win:
+player_1_win:
     li $v1, 1
 
-   end_check_winner:
+end_check_winner:
     lw $ra, 0($sp)
     lw $s0, 4($sp)
     lw $s1, 8($sp)
-    lw $t0, 12($sp)
-    addi $sp, $sp, 16
+    lw $s2, 12($sp)
+    lw $s3, 16($sp)
+    addi $sp, $sp, 20
     jr $ra
     
+#**********************************************************************   
     
- #**********************************************************************  
-
 #Working on snake portion of the code need to fix it since it is should be include the snake macro file.
 
     # drawHeads procedure 
