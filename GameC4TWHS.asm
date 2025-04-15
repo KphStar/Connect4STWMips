@@ -115,7 +115,7 @@
     
     #**********************************************************************
     
-    #*                MISC 
+    #*                MISC MESSAGE
     
     #**********************************************************************
     
@@ -172,7 +172,6 @@
 
     .include "macro_file.asm"      # Coin flip and utility macros
     .include "MIDImacro_file.asm"  # MIDI out macro
-    #.include "Snake_macro_file.asm" #snake uncomment this to work 
     
     #**********************************************************************
     
@@ -399,26 +398,26 @@ place_disc:
     beq $v0, 1, wormhole_handled
     beq $v0, 2, trap_handled
 
-    # Debug: Print the board state before checking for a win
-    jal displayBoard
-    li $v0, 4
-    la $a0, newline
-    syscall
-    li $v0, 4
-    la $a0, debug_msg
-    syscall
-    li $v0, 1
-    move $a0, $s3    
-    syscall
-    li $v0, 4
-    la $a0, comma_msg
-    syscall
-    li $v0, 1
-    move $a0, $s2
-    syscall
-    li $v0, 4
-    la $a0, newline
-    syscall
+    
+   # jal displayBoard          #from this
+   # li $v0, 4
+   # la $a0, newline
+   # syscall
+   # li $v0, 4               
+   # la $a0, debug_msg
+   # syscall
+   # li $v0, 1
+   # move $a0, $s3    
+   # syscall                # the commend part is for debug purposes 
+   # li $v0, 4
+   # la $a0, comma_msg
+   # syscall
+   # li $v0, 1
+   # move $a0, $s2
+   # syscall                    
+   # li $v0, 4
+   # la $a0, newline
+   # syscall           #To This
 
     move $a0, $s3        
     move $a1, $s2
@@ -441,7 +440,7 @@ place_disc:
     li $v0, 4
     la $a0, win_msg
     syscall
-    play_victory_tune
+    play_victory_tune  #sound for the winner declare 
     j end_game
         
 continue_game:
@@ -562,7 +561,7 @@ checkWormholesAndTrap:
     sw $s2, 12($sp)
     move $s0, $a0
     move $s1, $a1
-    move $s2, $a2       # Store player's piece in $s2
+    move $s2, $a2      
     lw $t4, wormhole1_entry
     lw $t5, wormhole1_entry+4
     beq $a0, $t4, check_w1_col
@@ -705,9 +704,7 @@ end_handle_wormhole:
     jr $ra
     
     
-#**********************************************************************
-#*              
-#**********************************************************************
+#*********************************************************************
 
 #**********************************************************************
 #*               REMOVE TRAP DISC PROCEDURE 
@@ -1062,11 +1059,13 @@ end_check_winner:
     addi $sp, $sp, 20
     jr $ra
     
-#**********************************************************************   
-    
-#Working on snake portion of the code need to fix it since it is should be include the snake macro file.
+#**********************************************************************
 
-    # drawHeads procedure 
+#**********************************************************************
+#*               DRAW COIN FLIP PROCEDURE 
+#**********************************************************************
+
+   
     drawHeads:
         addi $sp, $sp, -4
         sw $ra, 0($sp)
@@ -1129,7 +1128,7 @@ end_check_winner:
         addi $sp, $sp, 4
         jr $ra
 
-    # drawTails procedure
+ 
     drawTails:
         addi $sp, $sp, -4
         sw $ra, 0($sp)
@@ -1191,7 +1190,7 @@ end_check_winner:
         addi $sp, $sp, 4
         jr $ra
 
-    # drawEdgeVertical procedure 
+  
     drawEdgeVertical:
         addi $sp, $sp, -4
         sw $ra, 0($sp)
@@ -1212,7 +1211,7 @@ end_check_winner:
         blt $t2, 8, clear_edge_v_loop
         li $t0, 15
         li $t1, 12
-        li $t2, 0
+        li $t2,  0
         
     edge_v_loop:
         add $t5, $t1, $t2
@@ -1223,7 +1222,6 @@ end_check_winner:
         addi $sp, $sp, 4
         jr $ra
 
-    # drawEdgeHorizontal procedure 
     drawEdgeHorizontal:
         addi $sp, $sp, -4
         sw $ra, 0($sp)
@@ -1254,3 +1252,5 @@ end_check_winner:
         lw $ra, 0($sp)
         addi $sp, $sp, 4
         jr $ra
+        
+#**********************************************************************
